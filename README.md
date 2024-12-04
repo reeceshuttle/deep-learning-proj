@@ -9,15 +9,15 @@ Setup:
 venv:
 
 ```
-python -m venv dl-env
+python3.10 -m venv dl-env
 source dl-env/bin/activate
 ```
 
 conda:
 
 ```
-conda create --name deeplearning python=3.10
-conda activate deeplearning
+conda create --name dl python=3.10
+conda activate dl
 ```
 
 - install dependencies:
