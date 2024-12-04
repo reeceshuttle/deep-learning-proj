@@ -1,0 +1,15 @@
+step_to_revision = {
+    '20000': 'step20000-tokens84B',
+    '30000': 'step30000-tokens126B',
+    '40000': 'step40000-tokens168B',
+    '50000': 'step50000-tokens210B',
+    '100000': 'step100000-tokens419B',
+    '330000': 'step330000-tokens1384B',
+    '400000': 'step400000-tokens1678B',
+    '450000': 'step450000-tokens1887B',
+    '500000': 'step500000-tokens2097B',
+    '550000': 'step550000-tokens2307B',
+    '600000': 'step600000-tokens2517B',
+    '650000': 'step650000-tokens2726B',
+    '700000': 'step700000-tokens2936B',
+}
