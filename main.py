@@ -5,6 +5,7 @@ import torch
 
 from constants import step_to_revision
 from experiments import measure_loss_across_training
+from utils import quantize_model_using_gptq, measure_loss, real_quantize_model_using_gptq
 
 
 if __name__ == "__main__":
@@ -17,7 +18,6 @@ if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     base_model_name = "allenai/OLMo-1B"
-
     args.device = device
     args.base_model_name = base_model_name
 
@@ -29,4 +29,10 @@ if __name__ == "__main__":
     tokenizer.pad_token = tokenizer.eos_token
     model.config.pad_token_id = model.config.eos_token_id
 
-    measure_loss_across_training(args)
+
+    measure_loss(model, tokenizer, args)
+
+    model = real_quantize_model_using_gptq(tokenizer, args)
+    model.config.pad_token_id = model.config.eos_token_id
+
+    measure_loss(model, tokenizer, args)

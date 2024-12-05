@@ -1,5 +1,7 @@
-torch
+torch #=3.4
 transformers
 datasets
 ai2-olmo
 # tqdm
+optimum
+auto-gptq
