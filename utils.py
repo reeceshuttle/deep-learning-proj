@@ -3,31 +3,22 @@ from datasets import load_dataset, Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import GPTQConfig, AutoModelForCausalLM
-from hf_olmo import OLMoForCausalLM
+# from hf_olmo import OLMoForCausalLM
+from functools import partial
+
 
 from model import OLMoGPTQForCausalLM
+import torch.nn as nn
 
 from auto_gptq import BaseQuantizeConfig
 # from auto_gptq import AutoGPTQForCausalLM
 
 from constants import step_to_revision
 
-def measure_loss(model, tokenizer, args):
-    """s
-    NOTE: only implemented for batch size 1 right now.
-    model: huggingface transformer model
-    tokenizer: huggingface tokenizer for model
-    args: passed in via command line
-        use args are .num_samples, .eval_batch_size, .dataset
 
-    returns 
-    avg_loss: float
-    """
+def get_processed_dataset(tokenizer, args):
     def preprocess(example):
         return tokenizer(example['text'], truncation=True, max_length=1024)
-    def collate_fn(batch):
-        text = torch.tensor([item["input_ids"] for item in batch])
-        return text
     def filter_condition(example):
         return len(tokenizer(example["text"], truncation=True, max_length=1024)["input_ids"]) == 1024
     
@@ -46,6 +37,23 @@ def measure_loss(model, tokenizer, args):
     del filtered_examples
 
     dataset = dataset.map(preprocess, batched=True, remove_columns=['url', 'timestamp', 'text'])
+    return dataset
+
+def measure_loss(model, tokenizer, args):
+    """
+    NOTE: only implemented for batch size 1 right now.
+    model: huggingface transformer model
+    tokenizer: huggingface tokenizer for model
+    args: passed in via command line
+        use args are .num_samples, .eval_batch_size, .dataset
+
+    returns 
+    avg_loss: float
+    """
+    def collate_fn(batch):
+        text = torch.tensor([item["input_ids"] for item in batch])
+        return text
+    dataset = get_processed_dataset(tokenizer, args)
     dataloader = DataLoader(dataset, batch_size=args.eval_batch_size, collate_fn=collate_fn)
     model.eval()
     losses = []
@@ -102,5 +110,41 @@ def real_quantize_model_using_gptq(tokenizer, args):
     import pdb; pdb.set_trace()
 
     return model
+
+
+def attach_hooks_for_activation_statistics(model, activations):
+    def extract_statistics(outp):
+        """
+        For a certain sequence, output, the max, min, and percentiles. 
+        We will average across these.
+
+
+        TODO: do these per token and per channel.
+        """
+        return {
+            'max': torch.max(outp).item(),
+            'min': torch.min(outp).item(),
+            'mean': torch.mean(outp).item(),
+                }
+
+    def hook_fn(m, inp, outp, param_name):
+        """we will have this hook only operate on the outputs?"""
+        result = extract_statistics(outp)
+        for key in activations[param_name].keys(): activations[param_name][key].append(result[key])
+
+    hooks = []
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Linear):
+            print(f'adding hook for {name}')
+            hooks.append(
+                module.register_forward_hook(
+                    partial(hook_fn, param_name=name)
+                )
+            )
+    return hooks
+
+def remove_hooks(hooks):
+    for hook in hooks:
+        hook.remove()
 
 

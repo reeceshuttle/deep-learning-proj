@@ -2,10 +2,11 @@ from hf_olmo import OLMoForCausalLM
 import argparse
 from transformers import AutoTokenizer
 import torch
+import torch.nn as nn
 
 from constants import step_to_revision
 from experiments import measure_loss_across_training
-from utils import quantize_model_using_gptq, measure_loss, real_quantize_model_using_gptq
+from utils import *
 
 
 if __name__ == "__main__":
@@ -30,9 +31,29 @@ if __name__ == "__main__":
     model.config.pad_token_id = model.config.eos_token_id
 
 
-    measure_loss(model, tokenizer, args)
+    # measure_loss(model, tokenizer, args)
 
-    model = real_quantize_model_using_gptq(tokenizer, args)
-    model.config.pad_token_id = model.config.eos_token_id
+    # model = real_quantize_model_using_gptq(tokenizer, args)
+    # model.config.pad_token_id = model.config.eos_token_id
 
-    measure_loss(model, tokenizer, args)
+    # measure_loss(model, tokenizer, args)
+
+    activations = {
+            name: {
+            'max':[],
+            'min':[],
+            'mean':[],
+            } for name, module in model.named_modules() if isinstance(module, nn.Linear)
+            }
+        
+    hooks = attach_hooks_for_activation_statistics(model, activations)
+    
+    loss = measure_loss(model, tokenizer, args)
+    print(f'average loss: {loss}')
+    
+    remove_hooks(hooks)
+
+    def postprocess_activations():
+        raise NotImplementedError('Implement me!')
+
+    import pdb; pdb.set_trace()
