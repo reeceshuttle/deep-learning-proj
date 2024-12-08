@@ -205,7 +205,7 @@
           <tr>
             <td align="left">
               <span style="font-size: 17px"
-                ><a href="your_website">Reece Shuttleworth</a></span
+                ><a href="https://reeceshuttle.me">Reece Shuttleworth</a></span
               >
             </td>
           </tr>
@@ -226,10 +226,10 @@
         <div style="position: fixed; max-width: inherit; top: max(20%, 120px)">
           <b style="font-size: 16px">Outline</b><br /><br />
           <a href="#intro">Introduction</a><br /><br />
-          <a href="#does_x_do_y">Does X do Y?</a><br /><br />
-          <a href="#implications_and_limitations"
-            >Implications and limitations</a
-          ><br /><br />
+          <a href="#background">Background</a><br /><br />
+          <a href="#methods">Methods</a><br /><br />
+          <a href="#analysis">Analysis</a><br /><br />
+          <a href="#discussion">Discussion</a><br /><br />
         </div>
       </div>
       <div class="main-content-block">
@@ -246,6 +246,8 @@
         Motivate your project. What question are you asking. Why is it
         unanswered so far? What gap in the literature or practice are you
         filling? Why is it important?
+        <br />
+        A recent paper<a href="#ref_1">[1]</a> found that...
       </div>
       <div class="margin-right-block">
         Margin note that clarifies some detail #main-content-block for intro
@@ -253,48 +255,31 @@
       </div>
     </div>
 
-    <div class="content-margin-container" id="does_x_do_y">
+    <div class="content-margin-container" id="background">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Does X do Y?</h1>
-        It is well known that Y does Y. And this has raised the question does X
-        do Y? Because if Y does Y then it stands to reason that X does Y. But we
-        cannot answer this until we realize the Z implies Y and X can be linked
-        to Z.<br /><br />
-
-        Now let's write some math!<br />
-        <center>
-          <math xmlns="http://www.w3.org/1998/Math/MathML">
-            <mrow>
-              <mrow>
-                <mo>&#x2202;</mo>
-                <mi>y</mi>
-              </mrow>
-              <mo>/</mo>
-              <mrow>
-                <mo>&#x2202;</mo>
-                <mi>x</mi>
-              </mrow>
-            </mrow>
-            <mo>=</mo>
-            <mi>x</mi>
-          </math>
-        </center>
-        <br />
-        It's probably best to ask an LLM to help do the web formatting for math.
-        You can tell it "convert this latex equation into MathML:
-        $$\frac{\partial dy}{\partial dx} = x$$" But it took me a few tries. So,
-        if you get frustrated, you can embed an image of the equation, or use
-        other packages for rendering equations on webpages.
-      </div>
-      <div class="margin-right-block" style="transform: translate(0%, -100%)">
-        <!-- you can move the margin notes up and down with translate -->
-        Interestingly, Plato also asked if X does Y, in
-        <a href="#ref_1">[1]</a>.
+        <h1>Background / Related Work</h1>
+        Put Background here.<br /><br />
       </div>
     </div>
 
-    <div class="content-margin-container">
+    <div class="content-margin-container" id="methods">
+      <div class="margin-left-block"></div>
+      <div class="main-content-block">
+        <h1>Methods / Experiments</h1>
+        Put methods here.<br /><br />
+      </div>
+    </div>
+
+    <div class="content-margin-container" id="analysis">
+      <div class="margin-left-block"></div>
+      <div class="main-content-block">
+        <h1>Results & Analysis</h1>
+        Put results here.<br /><br />
+      </div>
+    </div>
+
+    <!-- <div class="content-margin-container">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Another section</h1>
@@ -306,12 +291,12 @@
       <div class="margin-right-block">
         A caption for the video could go here.
       </div>
-    </div>
+    </div> -->
 
-    <div class="content-margin-container" id="implications_and_limitations">
+    <div class="content-margin-container" id="discussion">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Implications and limitations</h1>
+        <h1>Discussion</h1>
         Let's end with some discussion of the implications and limitations.
       </div>
       <div class="margin-right-block"></div>
@@ -324,11 +309,9 @@
           <br />
           <span style="font-size: 16px">References:</span><br /><br />
           <a id="ref_1"></a>[1]
-          <a href="https://en.wikipedia.org/wiki/Allegory_of_the_cave"
-            >Allegory of the Cave</a
-          >, Plato, c. 375 BC<br /><br />
-          <a id="ref_2"></a>[2] <a href="">A Human-Level AGI</a>, OpenAI,
-          2025<br /><br />
+          <a href="https://arxiv.org/pdf/2411.04330"
+            >Scaling Laws For Precision</a
+          >, Kumar et al. 2024<br /><br />
         </div>
       </div>
       <div class="margin-right-block">
