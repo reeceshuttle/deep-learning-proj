@@ -2,6 +2,8 @@ torch #=3.4
 transformers
 datasets
 ai2-olmo
-# tqdm
-optimum
-auto-gptq
+tqdm
+
+# git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
+# cd lm-evaluation-harness
+# pip install -e .

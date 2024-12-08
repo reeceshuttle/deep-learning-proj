@@ -75,13 +75,37 @@ def measure_loss(model, tokenizer, args):
     avg_loss = sum(losses)/len(losses)
     return avg_loss
 
+def measure_perplexity(model, tokenizer, args):
+    return torch.exp(measure_loss(model, tokenizer, args))
+
+def evaluate(model, tokenizer):
+    testenc = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
+    testenc = tokenizer("\n\n".join(testenc['text']), return_tensors='pt')
+
+    testenc = testenc.input_ids.to(model.device)
+    nsamples = 40
+    model = model.eval()
+
+    nlls = []
+    for i in tqdm(range(nsamples), desc="evaluating..."):
+        batch = testenc[:, (i * 2048):((i + 1) * 2048)].to(model.device)
+        with torch.no_grad():
+            lm_logits = model(batch).logits
+        shift_logits = lm_logits[:, :-1, :].contiguous().float()
+        shift_labels = testenc[:, (i * 2048):((i + 1) * 2048)][:, 1:]
+        loss_fct = nn.CrossEntropyLoss()
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+        neg_log_likelihood = loss.float() * 2048
+        nlls.append(neg_log_likelihood)
+
+    return torch.exp(torch.stack(nlls).sum() / (nsamples * 2048))
 
 def quantize_model_using_gptq(tokenizer, args):
     gptq_config = GPTQConfig(bits=4, dataset='c4', tokenizer=tokenizer)
     quantized_model = AutoModelForCausalLM.from_pretrained(
         args.base_model_name, 
         device_map='auto', 
-        revision=step_to_revision[args.step], 
+        revision=step_to_revision[args.base_model_name][args.step], 
         quantization_config=gptq_config
         )
     return quantized_model
@@ -95,7 +119,7 @@ def real_quantize_model_using_gptq(tokenizer, args):
     )
     model = OLMoGPTQForCausalLM.from_pretrained(
         args.base_model_name, 
-        revision=step_to_revision[args.step],
+        revision=step_to_revision[args.base_model_name][args.step],
         quantize_config=quantize_config
     )
 
@@ -121,10 +145,17 @@ def attach_hooks_for_activation_statistics(model, activations):
 
         TODO: do these per token and per channel.
         """
+        # print(outp.shape)
+
+        # shape: (batch, seqlen, hidden)
+
+        # code to see the first sentences vals for each channel
+        # sorted(activations['model.transformer.blocks.18.ff_out']['max'][0])
+
         return {
-            'max': torch.max(outp).item(),
-            'min': torch.min(outp).item(),
-            'mean': torch.mean(outp).item(),
+            'max': torch.max(outp, dim=1).values.tolist()[0],
+            'min': torch.min(outp, dim=1).values.tolist()[0],
+            'mean': torch.mean(outp, dim=1).tolist()[0],
                 }
 
     def hook_fn(m, inp, outp, param_name):

@@ -1,6 +1,4 @@
-# deep-learning-proj
-
-Deep Learning Final Project
+# Deep Learning Final Project
 
 Setup:
 
@@ -24,6 +22,10 @@ conda activate dl
 
 ```
 pip install -r requirements.txt
+
+git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
+cd lm-evaluation-harness
+pip install -e .
 ```
 
 Usage:
