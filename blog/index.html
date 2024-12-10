@@ -195,10 +195,11 @@
             <td colspan="4">
               <span
                 style="
-                  font-size: 32px;
+                  font-size: 30px;
                   font-family: 'Courier New', Courier, monospace; /* Adds fallbacks */
                 "
-                >Project Title</span
+                >Exploring the Causes & Effects of Quantization-induced
+                Degradation in LLMs</span
               >
             </td>
           </tr>
@@ -220,11 +221,19 @@
       <div class="margin-right-block"></div>
     </div>
 
+    <div class="content-margin-container" id="methods">
+      <div class="margin-left-block"></div>
+      <div class="main-content-block">
+        <h1>TL;DR.</h1>
+        Too Long, Didn't Read.<br /><br />
+      </div>
+    </div>
+
     <div class="content-margin-container" id="intro">
       <div class="margin-left-block">
         <!-- table of contents here -->
         <div style="position: fixed; max-width: inherit; top: max(20%, 120px)">
-          <b style="font-size: 16px">Outline</b><br /><br />
+          <b style="font-size: 16px">Contents</b><br /><br />
           <a href="#intro">Introduction</a><br /><br />
           <a href="#background">Background</a><br /><br />
           <a href="#methods">Methods</a><br /><br />
@@ -232,9 +241,10 @@
           <a href="#discussion">Discussion</a><br /><br />
         </div>
       </div>
+
       <div class="main-content-block">
         <!--You can embed an image like this:-->
-        <img src="./images/your_image_here.png" width="512px" />
+        <img src="./images/QiD_loss.png" width="768px" />
       </div>
       <div class="margin-right-block">Caption for the image.</div>
     </div>
@@ -243,11 +253,76 @@
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Introduction</h1>
-        Motivate your project. What question are you asking. Why is it
-        unanswered so far? What gap in the literature or practice are you
-        filling? Why is it important?
+
+        Current LLMs are pre-trained far into the overtrained regime: they are
+        trained on many multiples of tokens greater than what is considered to
+        be compute optimal (around 20 tokens per model parameter [<a
+          href="#ref_8"
+          >8</a
+        >]). For example, LLaMA-3 8B [<a href="#ref_7">7</a>] was trained on
+        more than 15 Trillion tokens, which approaches 2000 tokens per model
+        parameter. Even though it is not compute optimal, this extended
+        pre-training stage has been shown to improve performance and reduce
+        inference costs given a particular level of performance [<a
+          href="#ref_6"
+          >6</a
+        >].
+
         <br />
-        A recent paper<a href="#ref_1">[1]</a> found that...
+        <br />
+
+        Another important method to reduce inference costs is quantization,
+        which reduces the precision that weights (and sometimes activations) are
+        stored in. This reduction in precision leads to memory and compute
+        savings, because you can represent the model in fewer bits and can more
+        easily move weights into GPU memory and do computations when the values
+        have fewer bits.
+
+        <br />
+        <br />
+
+        Generally, after training models are quantized before being served to
+        the public. However, recent work has observed an interesting phenomenon
+        in which models that are pre-trained for longer have higher loss after
+        post-training quantization (PTQ) than models that were trained on fewer
+        tokens[<a href="#ref_1">1</a>,<a href="#ref_2">2</a>]. This leads to a
+        clear conflict, because pre-training for longer leads to better
+        performance and enables smaller models to be used given a fixed level of
+        performance.
+
+        <br /><br />
+
+        This observation suggests that there will be a clear limit to the amount
+        we can quantize a model, which may place limits on the efficiency gains
+        we can get from techniques. While the current findings to not impact
+        existing methods because they are occuring at very low bits, like 3 bit,
+        as models get pre-trained for longer this observation has the potential
+        to also effect current methods.
+        <br /><br />
+
+        It is not clear why this phenomenon is occuring and what the
+        consequences of it will be. In this work, we aim to investigate the
+        causes and effects of this phenomenon. Previous work has shown that LLMs
+        with better performance have large activations with a higher frequency
+        [<a href="#ref_4">4</a>]. These large activations are difficult to
+        quantize without errors and are important for model performance [<a
+          href="#ref_4"
+          >4</a
+        >]. Could these be the culprit behind this degradation in performance?
+        Furthermore, this phenomenon has only been observed in loss. What are
+        the impacts of this on downstream task performance? Lastly, can we find
+        the specific part of the model that is breaking and causing this
+        phenomenon?
+
+        <br /><br />
+
+        Our results can be reproduced with our codebase, which can be found
+        <a
+          href="https://github.com/reeceshuttle/deep-learning-proj"
+          target="_blank"
+          ><u>here.</u></a
+        >
+        <br />
       </div>
       <div class="margin-right-block">
         Margin note that clarifies some detail #main-content-block for intro
@@ -260,7 +335,14 @@
       <div class="main-content-block">
         <h1>Background / Related Work</h1>
         Put Background here.<br /><br />
+        <h4>Quantization</h4>
+        In this work, we investigate two kinds of quantization
+        <h4>Quantization-induced Degradation</h4>
+
+        <h4>Large Activations in LLMs</h4>
+        <img src="./images/QiD_task_perf.png" width="1024px" />
       </div>
+      <div class="margin-right-block">Caption for the image.</div>
     </div>
 
     <div class="content-margin-container" id="methods">
@@ -268,7 +350,9 @@
       <div class="main-content-block">
         <h1>Methods / Experiments</h1>
         Put methods here.<br /><br />
+        <img src="./images/16bit_statistics.png" width="1024px" />
       </div>
+      <div class="margin-right-block">Caption for the image.</div>
     </div>
 
     <div class="content-margin-container" id="analysis">
@@ -276,7 +360,10 @@
       <div class="main-content-block">
         <h1>Results & Analysis</h1>
         Put results here.<br /><br />
+
+        <img src="./images/error_norm.png" width="1024px" />
       </div>
+      <div class="margin-right-block">Caption for the image.</div>
     </div>
 
     <!-- <div class="content-margin-container">
@@ -297,7 +384,9 @@
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Discussion</h1>
-        Let's end with some discussion of the implications and limitations.
+        Let's end with some discussion of the implications and limitations. is
+        something like superposition to blame? could quantizing the att_proj in
+        higher bits and the rest in lower bits fix this problem?
       </div>
       <div class="margin-right-block"></div>
     </div>
@@ -312,6 +401,36 @@
           <a href="https://arxiv.org/pdf/2411.04330"
             >Scaling Laws For Precision</a
           >, Kumar et al. 2024<br /><br />
+
+          <a id="ref_2"></a>[2]
+          <a href="https://arxiv.org/pdf/2411.17691"
+            >Low-Bit Quantization Favors Undertrained LLMs</a
+          >, Ouyang et al. 2024<br /><br />
+
+          <a id="ref_3"></a>[3]
+          <a
+            href="https://www.databricks.com/blog/calibrating-mosaic-evaluation-gauntlet"
+            >Calibrating the Mosaic Evaluation Gauntlet</a
+          >, Tessa Barton, 2024<br /><br />
+
+          <a id="ref_4"></a>[4]
+          <a href="https://arxiv.org/pdf/2208.07339">LLM.int8()</a>, Dettmers et
+          al. 2022<br /><br />
+
+          <a id="ref_5"></a>[5]
+          <a href="https://arxiv.org/pdf/2306.00978">AWQ</a>, Lin et al. 2023<br /><br />
+
+          <a id="ref_6"></a>[6]
+          <a href="https://arxiv.org/pdf/2302.13971">LLaMA</a>, Touvron et al.
+          2023<br /><br />
+
+          <a id="ref_7"></a>[7]
+          <a href="https://arxiv.org/pdf/2407.21783">LLaMA3</a>, Grattafiori et
+          al. 2024<br /><br />
+
+          <a id="ref_8"></a>[8]
+          <a href="https://arxiv.org/pdf/2203.15556">Chinchilla</a>, Hoffmann et
+          al. 2022<br /><br />
         </div>
       </div>
       <div class="margin-right-block">
