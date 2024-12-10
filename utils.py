@@ -2,16 +2,11 @@ import torch
 from datasets import load_dataset, Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import GPTQConfig, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
 # from hf_olmo import OLMoForCausalLM
 from functools import partial
 
-
-from model import OLMoGPTQForCausalLM
 import torch.nn as nn
-
-from auto_gptq import BaseQuantizeConfig
-# from auto_gptq import AutoGPTQForCausalLM
 
 from constants import step_to_revision
 
@@ -102,41 +97,6 @@ def evaluate_loss(model, tokenizer):
         nlls.append(neg_log_likelihood)
 
     return torch.stack(nlls).sum() / (nsamples * 2048)
-
-def quantize_model_using_gptq(tokenizer, args):
-    gptq_config = GPTQConfig(bits=4, dataset='c4', tokenizer=tokenizer)
-    quantized_model = AutoModelForCausalLM.from_pretrained(
-        args.base_model_name, 
-        device_map='auto', 
-        revision=step_to_revision[args.base_model_name][args.step], 
-        quantization_config=gptq_config
-        )
-    return quantized_model
-
-
-def real_quantize_model_using_gptq(tokenizer, args):
-    quantize_config = BaseQuantizeConfig(
-        bits=4, 
-        group_size=128,
-        desc_act=True # set to False to speed up interence? but hurts perplexity.
-    )
-    model = OLMoGPTQForCausalLM.from_pretrained(
-        args.base_model_name, 
-        revision=step_to_revision[args.base_model_name][args.step],
-        quantize_config=quantize_config
-    )
-
-    example = tokenizer(
-        "auto-gptq is an easy-to-use model quantization library with user-friendly apis, based on GPTQ algorithm."
-    )
-    examples=[{key:example[key] for key in example.keys() if key != 'token_type_ids'}]
-
-    print(f'{examples=}')
-
-    model.quantize(examples)
-    import pdb; pdb.set_trace()
-
-    return model
 
 
 def attach_hooks_for_activation_statistics(model, activations):

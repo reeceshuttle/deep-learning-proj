@@ -51,13 +51,6 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(args.base_model_name)
     tokenizer.pad_token = tokenizer.eos_token
 
-    # measure_loss(model, tokenizer, args)
-
-    # model = real_quantize_model_using_gptq(tokenizer, args)
-    # model.config.pad_token_id = model.config.eos_token_id
-
-    # measure_loss(model, tokenizer, args)
-
     if args.study_activations:
         model = load_model(args)
         activations = {
