@@ -78,7 +78,10 @@ def measure_loss(model, tokenizer, args):
 def measure_perplexity(model, tokenizer, args):
     return torch.exp(measure_loss(model, tokenizer, args))
 
-def evaluate(model, tokenizer):
+def evaluate_ppl(model, tokenizer):
+    return torch.exp(evaluate(model, tokenizer))
+
+def evaluate_loss(model, tokenizer):
     testenc = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
     testenc = tokenizer("\n\n".join(testenc['text']), return_tensors='pt')
 
@@ -98,7 +101,7 @@ def evaluate(model, tokenizer):
         neg_log_likelihood = loss.float() * 2048
         nlls.append(neg_log_likelihood)
 
-    return torch.exp(torch.stack(nlls).sum() / (nsamples * 2048))
+    return torch.stack(nlls).sum() / (nsamples * 2048)
 
 def quantize_model_using_gptq(tokenizer, args):
     gptq_config = GPTQConfig(bits=4, dataset='c4', tokenizer=tokenizer)
@@ -178,4 +181,86 @@ def remove_hooks(hooks):
     for hook in hooks:
         hook.remove()
 
+def get_calib_dataset(tokenizer=None, n_samples=256, block_size=512):
+    """From TinyML Pset 4."""
+    dataset = load_dataset("mit-han-lab/pile-val-backup", split="validation")
+    dataset = dataset.shuffle(seed=42)
+    samples = []
+    n_run = 0
+    for data in dataset:
+        line = data["text"]
+        line = line.strip()
+        line_encoded = tokenizer.encode(line)
+        if len(line_encoded) > block_size:
+            continue
+        sample = torch.tensor([line_encoded])
+        if sample.numel() == 0:
+            continue
+        samples.append(sample)
+        n_run += 1
+        if n_run == n_samples:
+            break
 
+    # now concatenate all samples and split according to block size
+    cat_samples = torch.cat(samples, dim=1)
+    n_split = cat_samples.shape[1] // block_size
+    print(f" * Split into {n_split} blocks")
+    return [cat_samples[:, i*block_size:(i+1)*block_size] for i in range(n_split)]
+
+@torch.no_grad()
+def get_calib_feat(model, tokenizer):
+    """From TinyML Pset 4."""
+    input_dict = dict()
+    def stat_input_max_hook(m, x, y, name):
+        if isinstance(x, tuple):
+            x = x[0]
+        x_max = x.view(-1, x.shape[-1]).abs().mean(dim=0).cpu().detach()
+        if name not in input_dict:
+            input_dict[name] = [x_max]
+        else:
+            input_dict[name] += [x_max]
+
+    hooks = []
+    for name, m in model.named_modules():
+        if isinstance(m, nn.Linear):
+            hooks.append(
+                m.register_forward_hook(
+                    partial(stat_input_max_hook, name=name)))
+
+    print("Collecting activation scales...")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    samples = get_calib_dataset(tokenizer)
+    pbar = tqdm(samples)
+    for input_ids in pbar:
+        input_ids = input_ids.to(device)
+        model(input_ids)
+
+    for hook in hooks:
+        hook.remove()
+    return input_dict
+
+def eval_using_harness(model, eval_tasks):
+    import lm_eval
+
+    # avoiding annoying print statement:
+    import os
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    result = {}
+
+    lm_for_eval = lm_eval.models.huggingface.HFLM(
+        pretrained=model,                  
+        batch_size=32) 
+    
+    results = lm_eval.evaluator.simple_evaluate(
+        lm_for_eval,
+        tasks=eval_tasks,
+        num_fewshot=0,
+        verbosity="CRITICAL",
+    )
+    for task in eval_tasks:
+        print(f"{task}: acc: {results['results'][task]['acc,none']}")
+        result[f"{task},acc"] = results['results'][task]['acc,none']
+
+    return result
