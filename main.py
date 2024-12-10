@@ -30,6 +30,8 @@ if __name__ == "__main__":
     argsparser.add_argument("--quantization_method", type=str, required=False, default=False, help="pick one of \'awq\',\'naive\'")
     # argsparser.add_argument("--do_eval_harness", type=bool, required=False, default=False)
     argsparser.add_argument("--reproduce_paper", type=bool, required=False, default=False)
+    argsparser.add_argument("--measure_quantization_error", type=bool, required=False, default=False)
+    argsparser.add_argument("--measure_activation_statistics", type=bool, required=False, default=False)
     args = argsparser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -70,8 +72,63 @@ if __name__ == "__main__":
 
         def postprocess_activations():
             raise NotImplementedError('Implement me!')
+    
+    if args.measure_activation_statistics:
+        raise NotImplementedError('Implement me!')
+    
+    if args.measure_quantization_error:
+        activations_dir_path = os.path.join(os.path.dirname(__file__), 'errors')
+        os.makedirs(activations_dir_path, exist_ok=True)
+        all_activations = {}
+        results = {}
+        for w_bits in [16, 5, 4, 3, 2]: 
+            model = load_model(args)
+            print('quantizing...')
+            if args.quantization_method == 'naive':
+                    print('doing naive...')
+                    pseudo_quantize_model_naive(
+                        model,
+                        w_bit=w_bits,
+                        q_group_size=128
+                    )
+            elif args.quantization_method == 'awq':
+                print('doing awq...')
+                input_feat = get_calib_feat(model, tokenizer)
+                pseudo_quantize_model_awq(
+                    model,
+                    w_bit=w_bits,
+                    input_feat=input_feat,
+                    a_bit=16,
+                    q_group_size=128
+                )
+            else:
+                raise ValueError
+            print(f'getting model activations...')
+            all_activations[w_bits] = get_model_activations(model, tokenizer)
+
+        
+        for bit in [5,4,3,2]: 
+            results[bit] = {}
+            for key in all_activations[bit].keys():
+                norm = torch.norm(torch.abs(all_activations[bit][key]-all_activations[16][key]))
+                max_diff = torch.max(torch.abs(all_activations[bit][key]-all_activations[16][key]))
+            
+                results[bit][key] = {
+                    'error_norm': norm.item(),
+                    'error_max_diff':max_diff.item()
+                }
+        
+        with open(os.path.join(activations_dir_path, f'{args.size},{args.step},{args.quantization_method}.json'), "w") as f:
+            json.dump(results, f)
         
 
+        # will use one example and store the full everything for each
+    
+    # two things, one will measure stats of activations across models. do this across 2048 examples.
+
+
+    # then measure quantization error between fp16 and quantized activaitons (before or after every param?).
+    # (will need to store the fp16 activations for each forward pass). how many examples to do? just one? 10 examples?
     
     if args.reproduce_paper:
         
@@ -99,6 +156,8 @@ if __name__ == "__main__":
                     a_bit=16,
                     q_group_size=128
                 )
+            else:
+                raise ValueError
             my_loss = measure_loss(model, tokenizer, args)
             han_loss = evaluate_loss(model, tokenizer).item()
             eval_tasks = ['piqa', 'winogrande', 'lambada_openai']
@@ -114,5 +173,3 @@ if __name__ == "__main__":
         print(results)
         with open(os.path.join(result_dir_path, f'{args.size},{args.step},{args.quantization_method}.json'), "w") as f:
             json.dump(results, f)
-
-    import pdb; pdb.set_trace()

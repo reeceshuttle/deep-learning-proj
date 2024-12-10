@@ -158,11 +158,13 @@ def get_calib_dataset(tokenizer=None, n_samples=256, block_size=512):
             continue
         samples.append(sample)
         n_run += 1
+        # if n_samples < 10: print(f'{samples=},{n_run=}')
         if n_run == n_samples:
             break
 
     # now concatenate all samples and split according to block size
     cat_samples = torch.cat(samples, dim=1)
+    # print(f'{cat_samples.shape[1]=}')
     n_split = cat_samples.shape[1] // block_size
     print(f" * Split into {n_split} blocks")
     return [cat_samples[:, i*block_size:(i+1)*block_size] for i in range(n_split)]
@@ -224,3 +226,43 @@ def eval_using_harness(model, eval_tasks):
         result[f"{task},acc"] = results['results'][task]['acc,none']
 
     return result
+
+def get_model_activations(model, tokenizer):
+    """
+    Gets the models activations for one example.
+    """
+    activations = {}
+
+    def get_activations(m, x, y, name):
+        # print(f'in get_activations, {name}')
+        if isinstance(x, tuple):
+            x = x[0]
+        assert name+',in' not in activations, "show be only doing 1 sequence"
+        activations[name+',in'] = x.clone()
+        activations[name+',out'] = y.clone()
+    
+    hooks = []
+    for name, m in model.named_modules():
+        if isinstance(m, nn.Linear):
+            # print(f'registered for {name}')
+            hooks.append(
+                m.register_forward_hook(
+                    partial(get_activations, name=name)))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    samples = get_calib_dataset(tokenizer, n_samples=64)
+    # print(f'samples1:{samples}')
+    samples = [samples[0]]
+    # print(f'samples2:{samples}')
+    pbar = tqdm(samples)
+    for input_ids in pbar:
+        # print(f'in loop')
+        input_ids = input_ids.to(device)
+        model(input_ids)
+
+    for hook in hooks:
+        hook.remove()
+    return activations
+    
+
