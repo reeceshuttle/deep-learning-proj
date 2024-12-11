@@ -241,7 +241,11 @@
       <div class="margin-right-block">
         <a id="fig_1"></a>Figure 1: Reproducing Quantization-induced Degradation
         (QiD). Both AWQ and naive zero-point RTN are used to quantize models and
-        confirm the findings of [<a href="#ref_1">1</a>].
+        loss is measured on the C4 dataset. We see that as you train for longer,
+        quantiation error increases. This confirms the findings of [<a
+          href="#ref_1"
+          >1</a
+        >].
       </div>
     </div>
 
@@ -320,10 +324,7 @@
         >
         <br />
       </div>
-      <div class="margin-right-block">
-        Margin note that clarifies some detail #main-content-block for intro
-        section.
-      </div>
+      <div class="margin-right-block"></div>
     </div>
 
     <div class="content-margin-container" id="background">
@@ -389,7 +390,12 @@
         findings.
         <img src="./images/QiD_task_perf.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Figure 2: Task performance caption.</div>
+      <div class="margin-right-block">
+        Figure 2: In contrast to Figure q, when we measure task performance of
+        the quantized models, we see that 4 and 5 bit perform almost
+        equivalently to full precision. This is across 3 datasets and two
+        quantization methods.
+      </div>
     </div>
 
     <div class="content-margin-container" id="methods">
@@ -463,32 +469,117 @@
         <br />
         <img src="./images/16bit_statistics.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Figure 3: statistics caption.</div>
+      <div class="margin-right-block">
+        Figure 3: We measure statistics of the activations across OLMo-1B
+        training steps. We find that the the size of activations actually appear
+        to <i>decrease</i> across training steps, suggesting that they are not
+        responsible of QiD.
+      </div>
     </div>
 
     <div class="content-margin-container" id="analysis">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Results & Analysis</h1>
-
+        Here, we discuss the results of our experiments as described in the
+        previous section.
         <h5>Testing the Effect of QiD on Task Performance</h5>
-        ...
+        Examining Figure 2, we see that 3 bit quantization has a strong
+        degradation in task performance for all three datasets, irrespective of
+        the quantization method. However, we do notice that for 4 and 5 bit
+        quantization, both naive and AWQ are able to match or nearly match the
+        performance of full precision across OLMo's training steps, even when
+        loss is not similar due to QiD. This is an interesting finding and shows
+        that QiD will not be universal for all things that the model does, and
+        it suggests that more research is needed into what QiD is doing to the
+        model and what it impacts.
+        <br />
+        This also suggests that language modelling loss may not be a perfect
+        measurement for diagnosing practices that are good and bad for LLMs:
+        what we care about is task performance, and loss here may be leading us
+        astray.
         <h5>Testing the Impact of Activations on QiD</h5>
-        ...
+        When examining the statistics that we measured from the activations
+        across training steps, we actually observe the reverse to what we
+        expected: the size of activations appears to be going down across
+        training steps, not up. This holds especcially well for the average
+        absolute mean of the activations and the raw number of activations above
+        1. Activations may not be the culprit of QiD.
+
+        <br />
+        <br />
+        When examining the difference between naive quantization and AWQ, we
+        find something similar to above: naive quantization and AWQ have very
+        little difference between both their loss(Figure 1) and task
+        performance(Figure 2). This further suggests that activations are
+        unlikely to be causing QiD since naive quantization performs as well as
+        AWQ.
+
+        <br /><br />
+        Because of these two, we have strong reasons to believe that activations
+        are unlikely to be the cause of QiD.
         <h5>Testing what Model Component is Causing QiD</h5>
-        attn_proj is the culprit... ...
+
+        Studying the plot for Figure 4, we look for patterns that are different
+        across training steps, since as training occurs QiD gets worse. Across
+        training steps and quantization levels, the norm of the activation error
+        appears to be pretty similar for the attention output, feed forward
+        projection, and feed forward output layers, regardless of the
+        quantization technique used. However, We can notice that across training
+        steps, the norm of the activation error of the attention projection
+        module clearly grows across training steps. This finding is independent
+        of quantization technique and the number of bit used for quantization.
+        This is a <b>very</b> interesting finding. This suggests that
+        <i>the attention projection module is responsible for QiD</i> while the
+        other three modules appear to not have a notable change in activation
+        error across training steps.
+        <br />
+        This finding suggests several remedies for future work. Could keeping
+        the attention projection layer in higher precision, lets say 8bit, while
+        keeping the other layers in low precision help allieviate QiD?
         <img src="./images/error_norm.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Figure 4: Error norm figure.</div>
+      <div class="margin-right-block">
+        Figure 4: We measure the norm of the difference between the full
+        precision and quantized activations for each layer number and type. We
+        consider this the activation quantization error. We see that across
+        training steps, the loss of the attention output, feed forward
+        projection, and feed forward output layers have similar error. However,
+        the attention projection layer (red line) has error that grows across
+        training steps. This finding holds across different quantization levels.
+        This suggests that the attention projection layer is reponsible for QiD.
+      </div>
     </div>
 
     <div class="content-margin-container" id="discussion">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Discussion</h1>
-        Let's end with some discussion of the implications and limitations. is
-        something like superposition to blame? could quantizing the att_proj in
-        higher bits and the rest in lower bits fix this problem?
+        In this work, we investigated the impact of QiD on task performance, the
+        impact of activations on QiD, and which model component is responsible
+        for QiD. We found that although loss does degrade across training steps
+        when you quantize the model, task performance stays similar to that of
+        full precision. We found that large activations are not responsible for
+        QiD. Lastly we found that the attention projection layer seems to be the
+        culprit of QiD.
+
+        <br />
+
+        If large activations are not responsible for QiD, what is? Completely
+        speculatively, it may be the case that as the model is trained for
+        longer and gets more and more into a superposition [<a href="#ref_14"
+          >14</a
+        >], quantization somehow deletes information in a that harms the model
+        more if it has been trained for longer.
+
+        <br />
+        This work has several limitations. Most notably, we only studied one
+        model. Futher, this model is not very large, meaning certain phenomena
+        may occur with it and not larger, more SOTA models. Other limitations
+        include not isolating the causes of the things we have observed:
+        currently they are only observations. We leave to future work
+        replicating our study on OLMo-7B and examining if keeping the attention
+        projection module in full precision eliminates QiD.
       </div>
       <div class="margin-right-block"></div>
     </div>
@@ -554,6 +645,10 @@
           <a id="ref_13"></a>[13]
           <a href="https://arxiv.org/abs/1606.06031">LAMBADA</a>, Paperno et al.
           2016<br /><br />
+          <a id="ref_14"></a>[14]
+          <a href="https://transformer-circuits.pub/2022/toy_model/index.html"
+            >Toy Models of Superposition</a
+          >, Elhage et al. 2016<br /><br />
         </div>
       </div>
       <div class="margin-right-block">
