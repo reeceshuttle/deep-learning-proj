@@ -221,14 +221,6 @@
       <div class="margin-right-block"></div>
     </div>
 
-    <div class="content-margin-container" id="methods">
-      <div class="margin-left-block"></div>
-      <div class="main-content-block">
-        <h1>TL;DR.</h1>
-        Too Long, Didn't Read.<br /><br />
-      </div>
-    </div>
-
     <div class="content-margin-container" id="intro">
       <div class="margin-left-block">
         <!-- table of contents here -->
@@ -246,7 +238,11 @@
         <!--You can embed an image like this:-->
         <img src="./images/QiD_loss.png" width="768px" />
       </div>
-      <div class="margin-right-block">Caption for the image.</div>
+      <div class="margin-right-block">
+        <a id="fig_1"></a>Figure 1: Reproducing Quantization-induced Degradation
+        (QiD). Both AWQ and naive zero-point RTN are used to quantize models and
+        confirm the findings of [<a href="#ref_1">1</a>].
+      </div>
     </div>
 
     <div class="content-margin-container" id="intro">
@@ -333,52 +329,158 @@
     <div class="content-margin-container" id="background">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Background / Related Work</h1>
-        Put Background here.<br /><br />
-        <h4>Quantization</h4>
-        In this work, we investigate two kinds of quantization
-        <h4>Quantization-induced Degradation</h4>
+        <h1>Background</h1>
+        <h5>Quantization</h5>
 
-        <h4>Large Activations in LLMs</h4>
+        Quantization takes values of a certain precision and converts them to a
+        lower precision. This is a lossy process. For example, converting from
+        FP32 to FP16 may lead cause the number to lose some of its least
+        significant values. Making this conversion is good performance, because
+        with this change it is easier to store and move weights and more
+        efficient to do MACs.
+
+        <br />
+
+        The goal of model quantization is to reduce the size of the model while
+        preserving performance as much as possible. While there are many ways to
+        do quantization, this work focuses on two: zero-point round-to-nearest
+        (RTN) and activation-aware quantization (AWQ). Zero-point RTN works by
+        rounding every value to its nearest corresponding value in a new range,
+        which is dictated by the maximum and minimum number in the set of
+        numbers that are going to be quantized, as shown in the graphic below.
+        We call this method 'naive' in this article going forward because it is
+        not informed by the activations: it only acts on the weights.
+
+        <br />
+
+        In contrast, AWQ works by implementing the same method as zero-point
+        RTN, but with a twist: before quantization, weights are scaled up and
+        activations are scaled down in order to reduce the quantization error
+        associated with quantizing large activations. These scaling factors are
+        commonly found via search and using a small calibration set in order to
+        identify channels that commonly have large activations. AWQ has been
+        shown to reduce quantization loss for LLMs.
+        <img src="./images/quant_example.png" width="256px" />
+
+        <h5>Quantization-induced Degradation</h5>
+
+        Recent work has found that models that are pre-trained for longer have
+        higher loss after post-training quantization (PTQ) than models that were
+        trained on fewer tokens[<a href="#ref_1">1</a>,<a href="#ref_2">2</a>].
+        Specifically, they find that when using 3-5 bits of weight-only
+        quantization, loss goes up more on models pre-trained for longer. This
+        phenomenon is called Quantization-induced Degradation. Eventually,
+        models trained for a long time actually have higher loss post
+        quantization than lose trained for a shorter period of time. This can be
+        observed in our <a href="#fig_1">Figure 1</a>, where we reproduced the
+        finding.
+
+        <h5>Large Activations in LLMs</h5>
+
+        Previous work has found that LLMs, particularly those trained to low
+        perplexity, have large activations. These large activations generally
+        occur in specific channels[llm.int8] for tokens and certain tokens like
+        space or new line characters[massive activations]. These are difficult
+        to quantize becuase they increase the quantization range (as described
+        above) and increase the error. To combat this, techniques like
+        Mixed-Precision[<a href="#ref_4">4</a>] and AWQ[<a href="ref_5">5</a>]
+        have been developed to handle these large activations and reduce the
+        quantization error. talk about llm int8 and massive activations
+        findings.
         <img src="./images/QiD_task_perf.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Caption for the image.</div>
+      <div class="margin-right-block">Figure 2: Task performance caption.</div>
     </div>
 
     <div class="content-margin-container" id="methods">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Methods / Experiments</h1>
-        Put methods here.<br /><br />
+        <h1>Methods</h1>
+        For all of our studies, we use the OLMo-1B[<a href="#ref_9">9</a>] class
+        of models. What makes these powerful for research is that it was trained
+        for 3 trillion tokens and, importantly, checkpoints were frequently
+        taken during training. They released all checkpoints to the public. This
+        gives us a sequence of models across pre-training that we can then use
+        to study QiD.
+        <h5>Testing the Effect of QiD on Task Performance</h5>
+        Previously, QiD has only been observed on language modelling loss. We
+        are interested in seeing how task performance is impacted by this
+        effect. To measure this, we test the quantized OlMo models across
+        training steps on several common tasks for benchmarking LLMs. We select
+        PIQA[<a href="#ref_11">11</a>], Winogrande[<a href="#ref_12">12</a>],
+        and LAMBADA[<a href="#ref_13">13</a>], because they are found to be
+        strong predictors of improved language modelling[<a href="#ref_3">3</a
+        >]. We use the lm-evaluation-harness[<a href="#ref_10">10</a>] to
+        evaluate the models and measure zero-shot accuracy for all tasks. We
+        describe our results below and report our results in Figure 2.
+        <h5>Testing the Impact of Activations on QiD</h5>
+        We look for a link between the activations and QiD in two ways.
+        <br />
+        First, we study the activations of our OLMo models across training steps
+        by tracking several statistics associated with activation size. The
+        activations we study are created from an example of sequence length 512
+        and are recorded after every single weight matrix in the model. We
+        record and report 5 statistics across training steps: the average across
+        layers of the absolute mean of the activations, the average across
+        layers of the absolute maximum in the activations, and the raw number of
+        activations above 1, 10, and 100 respectively. If the size of
+        activations appear to go up significantly when QiD onsets, then we would
+        have evidence of the effect of large activations on the observed
+        phenomenon of QiD. We report our findings below and in Figure 3.
+
+        <br />
+        Second, we implicitly study the impact of the activations on
+        quantization error by measuring the difference in quantization error
+        between naive zero-point RTN and AWQ. Since AWQ is activation aware
+        while our naive method is not, if activations play a big role in this
+        phenomenon then we should expect that AWQ will reduce the quantization
+        error of the models. Is it the case that AWQ doesn't exhibit QiD but
+        naively doing zero-point RTN does? To test this, we quantize the OLMo-1B
+        models across training steps with both methods and compare the loss and
+        task performance that both methods achieve. If AWQ gets much less loss
+        and much better task performance than our naive method, then we would
+        have evidence of the importance of handling activations correctly in
+        order to reduce the phenomenon of QiD. These results are found in Figure
+        1 & 2.
+        <br />
+
+        <h5>Testing what Model Component is Causing QiD</h5>
+        We are interested in diagnosing exactly why QiD is occuring. It may not
+        be the case that the entire model is degrading equally and certain
+        components or aspects of the model may be the cause of our observations.
+        <br />
+        To test if there are certain modules in the model that have an increase
+        in loss in comparison to full precision we measure the norm of the
+        difference in the activations outputted by every weight matrix between
+        the full precision and each quantized model. This can be thought of as
+        measuring the error in the activations incurred by the model at a
+        certain step of the forward pass because of quantization. If we can find
+        that a certain module has constant "activation quantization loss" while
+        examining it across training steps, it likely isn't responsible for QiD.
+        In contrast, if a module has increasing "activation quantization loss",
+        it is likely contributing to QiD. We report this experiment in Figure 4.
+
+        <br />
         <img src="./images/16bit_statistics.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Caption for the image.</div>
+      <div class="margin-right-block">Figure 3: statistics caption.</div>
     </div>
 
     <div class="content-margin-container" id="analysis">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
         <h1>Results & Analysis</h1>
-        Put results here.<br /><br />
 
+        <h5>Testing the Effect of QiD on Task Performance</h5>
+        ...
+        <h5>Testing the Impact of Activations on QiD</h5>
+        ...
+        <h5>Testing what Model Component is Causing QiD</h5>
+        attn_proj is the culprit... ...
         <img src="./images/error_norm.png" width="1024px" />
       </div>
-      <div class="margin-right-block">Caption for the image.</div>
+      <div class="margin-right-block">Figure 4: Error norm figure.</div>
     </div>
-
-    <!-- <div class="content-margin-container">
-      <div class="margin-left-block"></div>
-      <div class="main-content-block">
-        <h1>Another section</h1>
-        In this section we embed a video:
-        <video class="my-video" loop autoplay muted style="width: 725px">
-          <source src="./images/mtsh.mp4" type="video/mp4" />
-        </video>
-      </div>
-      <div class="margin-right-block">
-        A caption for the video could go here.
-      </div>
-    </div> -->
 
     <div class="content-margin-container" id="discussion">
       <div class="margin-left-block"></div>
@@ -431,6 +533,27 @@
           <a id="ref_8"></a>[8]
           <a href="https://arxiv.org/pdf/2203.15556">Chinchilla</a>, Hoffmann et
           al. 2022<br /><br />
+
+          <a id="ref_9"></a>[9]
+          <a href="https://arxiv.org/pdf/2402.00838">OLMo</a>, Groeneveld et al.
+          2024<br /><br />
+
+          <a id="ref_10"></a>[10]
+          <a href="https://github.com/EleutherAI/lm-evaluation-harness"
+            >lm-evaluation-harness</a
+          >, EleutherAI 2024<br /><br />
+
+          <a id="ref_11"></a>[11]
+          <a href="https://arxiv.org/abs/1911.11641">PIQA</a>, Bist et al.
+          2019<br /><br />
+
+          <a id="ref_12"></a>[12]
+          <a href="https://arxiv.org/abs/1907.10641">Winogrande</a>, Sakaguchi
+          et al. 2019<br /><br />
+
+          <a id="ref_13"></a>[13]
+          <a href="https://arxiv.org/abs/1606.06031">LAMBADA</a>, Paperno et al.
+          2016<br /><br />
         </div>
       </div>
       <div class="margin-right-block">
