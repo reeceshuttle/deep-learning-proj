@@ -1,8 +1,8 @@
 # Deep Learning Final Project
 
-Setup:
+### Setup:
 
-- create and install environment:
+1. create and activate environment:
 
 venv:
 
@@ -18,7 +18,7 @@ conda create --name dl python=3.10
 conda activate dl
 ```
 
-- install dependencies:
+2. install dependencies:
 
 ```
 pip install -r requirements.txt
@@ -28,4 +28,15 @@ cd lm-evaluation-harness
 pip install -e .
 ```
 
-Usage:
+### Usage:
+
+We use the OLMo 7b and 1b models.
+step: which revision to use.
+
+example:
+
+```
+python main.py --size=7b --step=500000 {args}
+```
+
+python main.py --size=1b --step=500000 --reproduce_paper=True --quantization_method=awq
