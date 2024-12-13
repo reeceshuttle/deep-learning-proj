@@ -74,7 +74,7 @@ def measure_perplexity(model, tokenizer, args):
     return torch.exp(measure_loss(model, tokenizer, args))
 
 def evaluate_ppl(model, tokenizer):
-    return torch.exp(evaluate(model, tokenizer))
+    return torch.exp(evaluate_loss(model, tokenizer))
 
 def evaluate_loss(model, tokenizer):
     testenc = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
@@ -227,7 +227,7 @@ def eval_using_harness(model, eval_tasks):
 
     return result
 
-def get_model_activations(model, tokenizer):
+def get_model_activations(model, tokenizer, n_samples):
     """
     Gets the models activations for one example.
     """
@@ -251,7 +251,7 @@ def get_model_activations(model, tokenizer):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    samples = get_calib_dataset(tokenizer, n_samples=64)
+    samples = get_calib_dataset(tokenizer, n_samples=n_samples)
     # print(f'samples1:{samples}')
     samples = [samples[0]]
     # print(f'samples2:{samples}')

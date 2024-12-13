@@ -74,7 +74,32 @@ if __name__ == "__main__":
             raise NotImplementedError('Implement me!')
     
     if args.measure_activation_statistics:
-        raise NotImplementedError('Implement me!')
+        stats = {}
+        statistics_dir_path = os.path.join(os.path.dirname(__file__), 'statistics')
+        os.makedirs(statistics_dir_path, exist_ok=True)
+        model = load_model(args)
+        activations = get_model_activations(model, tokenizer, n_samples=64)
+        # for the fp16 model, do the forward passes and measure the stats per matrix: min, max, mean, #(>n),
+        for key in activations.keys():
+            stats[key] = {
+                'max': torch.max(activations[key]).item(),
+                'min': torch.min(activations[key]).item(),
+                'abs_max': torch.max(torch.abs(activations[key])).item(),
+                'mean': torch.mean(activations[key]).item(),
+                'abs_mean': torch.mean(torch.abs(activations[key])).item(),
+                '>1': torch.sum(1*(activations[key]>1)).item(),
+                '>5': torch.sum(1*(activations[key]>5)).item(),
+                '>10': torch.sum(1*(activations[key]>10)).item(),
+                '>50': torch.sum(1*(activations[key]>50)).item(),
+                '>100': torch.sum(1*(activations[key]>100)).item(),
+                '>500': torch.sum(1*(activations[key]>500)).item(),
+                '>1000': torch.sum(1*(activations[key]>1000)).item(),
+            }
+        
+        print(stats)
+        with open(os.path.join(statistics_dir_path, f'{args.size},{args.step}.json'), "w") as f:
+            json.dump(stats, f)
+        
     
     if args.measure_quantization_error:
         activations_dir_path = os.path.join(os.path.dirname(__file__), 'errors')
@@ -104,7 +129,7 @@ if __name__ == "__main__":
             else:
                 raise ValueError
             print(f'getting model activations...')
-            all_activations[w_bits] = get_model_activations(model, tokenizer)
+            all_activations[w_bits] = get_model_activations(model, tokenizer, n_samples=64)
 
         
         for bit in [5,4,3,2]: 
