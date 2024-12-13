@@ -1,0 +1,28 @@
+export CUDA_VISIBLE_DEVICES=3;
+python main.py --size=1b --step=20000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=30000 --measure_activation_statistics=True --quantization_method=awq;
+# python main.py --size=1b --step=40000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=50000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=100000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=330000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=400000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=450000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=500000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=550000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=600000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=650000 --measure_activation_statistics=True --quantization_method=awq;
+python main.py --size=1b --step=700000 --measure_activation_statistics=True --quantization_method=awq;
+
+python main.py --size=1b --step=20000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=30000 --measure_activation_statistics=True --quantization_method=naive;
+# python main.py --size=1b --step=40000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=50000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=100000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=330000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=400000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=450000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=500000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=550000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=600000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=650000 --measure_activation_statistics=True --quantization_method=naive;
+python main.py --size=1b --step=700000 --measure_activation_statistics=True --quantization_method=naive;
