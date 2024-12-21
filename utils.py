@@ -238,8 +238,8 @@ def get_model_activations(model, tokenizer, n_samples):
         if isinstance(x, tuple):
             x = x[0]
         assert name+',in' not in activations, "show be only doing 1 sequence"
-        activations[name+',in'] = x.clone()
-        activations[name+',out'] = y.clone()
+        # activations[name+',in'] = x.clone().to(torch.float16)
+        activations[name+',out'] = y.clone().to(torch.float16)
     
     hooks = []
     for name, m in model.named_modules():
@@ -264,5 +264,20 @@ def get_model_activations(model, tokenizer, n_samples):
     for hook in hooks:
         hook.remove()
     return activations
+
+def modify_inputs_of_model(model):
+    """used to make float16 change work for model."""
+    def pre_hook(m, x):
+        if isinstance(x, tuple):
+            x = x[0]
+        return x.to(torch.float16)
+
+    hooks = []
+
+    for n, m in model.named_modules():
+        if isinstance(m, nn.Linear):
+            hooks.append(
+                m.register_forward_pre_hook(
+                    partial(pre_hook)))
     
 

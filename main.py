@@ -102,11 +102,14 @@ if __name__ == "__main__":
         
     
     if args.measure_quantization_error:
+        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
         activations_dir_path = os.path.join(os.path.dirname(__file__), 'errors')
         os.makedirs(activations_dir_path, exist_ok=True)
         all_activations = {}
         results = {}
-        for w_bits in [16, 5, 4, 3, 2]: 
+        bits_to_use = [16, 5, 4, 3]
+        for w_bits in bits_to_use:
+            print(f'starting for {w_bits=}')
             model = load_model(args)
             print('quantizing...')
             if args.quantization_method == 'naive':
@@ -128,20 +131,25 @@ if __name__ == "__main__":
                 )
             else:
                 raise ValueError
-            print(f'getting model activations...')
+            print(f'getting model activations for {w_bits=}...')
+            model = model.to(torch.float16) # trying to avoid OOM error
+            modify_inputs_of_model(model)
+            # do_in_activations = False
             all_activations[w_bits] = get_model_activations(model, tokenizer, n_samples=64)
+            del model
 
-        
-        for bit in [5,4,3,2]: 
-            results[bit] = {}
-            for key in all_activations[bit].keys():
-                norm = torch.norm(torch.abs(all_activations[bit][key]-all_activations[16][key]))
-                max_diff = torch.max(torch.abs(all_activations[bit][key]-all_activations[16][key]))
-            
-                results[bit][key] = {
-                    'error_norm': norm.item(),
-                    'error_max_diff':max_diff.item()
-                }
+            if w_bits in bits_to_use[1:]:
+                results[w_bits] = {}
+                for key in all_activations[w_bits].keys():
+                    norm = torch.norm(torch.abs(all_activations[w_bits][key]-all_activations[16][key]))
+                    max_diff = torch.max(torch.abs(all_activations[w_bits][key]-all_activations[16][key]))
+                
+                    results[w_bits][key] = {
+                        'error_norm': norm.item(),
+                        'error_max_diff':max_diff.item()
+                    }
+                del all_activations[w_bits]
+            print(f'{all_activations.keys()=}, {results.keys()=}')
         
         with open(os.path.join(activations_dir_path, f'{args.size},{args.step},{args.quantization_method}.json'), "w") as f:
             json.dump(results, f)
