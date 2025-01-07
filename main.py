@@ -32,7 +32,10 @@ if __name__ == "__main__":
     argsparser.add_argument("--reproduce_paper", type=bool, required=False, default=False)
     argsparser.add_argument("--measure_quantization_error", type=bool, required=False, default=False)
     argsparser.add_argument("--measure_activation_statistics", type=bool, required=False, default=False)
+    argsparser.add_argument("--dont_measure_losses", action='store_true')
+    argsparser.add_argument("--dont_measure_tasks", action='store_true')
     args = argsparser.parse_args()
+    print(args)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -166,9 +169,18 @@ if __name__ == "__main__":
     if args.reproduce_paper:
         
         result_dir_path = os.path.join(os.path.dirname(__file__), 'results')
-        os.makedirs(result_dir_path, exist_ok=True)
+        result_name = os.path.join(result_dir_path, f'{args.size},{args.step},{args.quantization_method}.json')
+        if not os.path.exists(result_dir_path):
+            os.makedirs(result_dir_path, exist_ok=True)
         
-        results = {}
+        if not os.path.exists(result_name):
+            results = {}
+            print('new experiment type...')
+        else:
+            with open(result_name, 'r') as file:
+                results = json.load(file)
+            print('loaded existing results..')
+        
         for w_bits in [16, 5, 4, 3, 2]:
             print(f'doing {w_bits} bit for {args.size},{args.step}')
             model = load_model(args)
@@ -191,18 +203,36 @@ if __name__ == "__main__":
                 )
             else:
                 raise ValueError
-            my_loss = measure_loss(model, tokenizer, args)
-            han_loss = evaluate_loss(model, tokenizer).item()
-            eval_tasks = ['piqa', 'winogrande', 'lambada_openai']
-            accs = eval_using_harness(model, eval_tasks)
             
-            results[w_bits] = {
-                'my_loss': my_loss,
-                'han_loss': han_loss,
-                **accs
-            }
+            to_add = {}
+            if not args.dont_measure_losses:
+                print('measuring losses...')
+                my_loss = measure_loss(model, tokenizer, args)
+                han_loss = evaluate_loss(model, tokenizer).item()
+                to_add = {
+                    'my_loss': my_loss,
+                    'han_loss': han_loss,
+                }
+            if not args.dont_measure_tasks:
+                print('measuring tasks...')
+                eval_tasks = ['hellaswag'] # 'piqa', 'winogrande', 'lambada_openai', 
+                accs = eval_using_harness(model, eval_tasks)
+                to_add = {**to_add, **accs}
+            
+            w_bits = str(w_bits) # json saves all keys as strs
+            if w_bits not in results:
+                print('did not find key...')
+                results[w_bits] = {
+                    **to_add
+                }
+            else:
+                print(f'found key...')
+                results[w_bits] = {
+                    **results[w_bits], **to_add
+                }
+
             print(results)
         print(args.base_model_name, args.step)
         print(results)
-        with open(os.path.join(result_dir_path, f'{args.size},{args.step},{args.quantization_method}.json'), "w") as f:
+        with open(result_name, "w") as f:
             json.dump(results, f)
