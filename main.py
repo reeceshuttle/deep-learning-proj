@@ -34,6 +34,7 @@ if __name__ == "__main__":
     argsparser.add_argument("--measure_activation_statistics", type=bool, required=False, default=False)
     argsparser.add_argument("--dont_measure_losses", action='store_true')
     argsparser.add_argument("--dont_measure_tasks", action='store_true')
+    argsparser.add_argument("--study_sparsity", action='store_true')
     args = argsparser.parse_args()
     print(args)
 
@@ -236,3 +237,37 @@ if __name__ == "__main__":
         print(results)
         with open(result_name, "w") as f:
             json.dump(results, f)
+    
+    if args.study_sparsity:
+        sparse_dir_path = os.path.join(os.path.dirname(__file__), 'sparsity')
+        sparse_name = os.path.join(sparse_dir_path, f'{args.size},{args.step}.json')
+        if not os.path.exists(sparse_dir_path):
+            os.makedirs(sparse_dir_path, exist_ok=True)
+
+        results = {}
+        model = load_model(args)
+
+        magnitudes = [1e-10, 5e-10, 1e-9, 5e-9, 1e-8, 5e-8, 1e-7, 5e-7, 1e-6, 5e-6, 1e-5, 1e-4, 5e-4, 1e-3, 5e-3, 0.01, 0.05, 0.1, 0.5, 1]
+        threshold_result = {magnitude:0 for magnitude in magnitudes}
+
+        quantiles = [0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+        quantile_results = {}
+
+        for n,m in model.named_modules():
+            if isinstance(m, nn.Linear):
+                abs_w = torch.abs(m.weight)
+                for magnitude in magnitudes:
+                    threshold_result[magnitude] += torch.sum(torch.abs(m.weight) < magnitude).item()
+                
+                quantile_results[n] = {}
+                num_to_sample = 1000000
+                flat_weights = abs_w.flatten()
+                sampled_indices = torch.randperm(flat_weights.size(0))[:num_to_sample]
+                sampled_weights = flat_weights[sampled_indices]
+                for quantile in quantiles:
+                    quantile_results[n][quantile] = torch.quantile(sampled_weights, quantile).item()
+        
+        final_results = {'thresholds': threshold_result, 'approx_quantiles': quantile_results}
+        print(final_results)
+        with open(sparse_name, "w") as f:
+            json.dump(final_results, f)

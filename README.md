@@ -40,3 +40,13 @@ python main.py --size=7b --step=500000 {args}
 ```
 
 python main.py --size=1b --step=500000 --reproduce_paper=True --quantization_method=awq
+
+### Help:
+
+#### To sync results to local machine:
+
+on local machine, run:
+
+```
+scp -r "reeceshuttle@align-3.csail.mit.edu:/raid/lingo/reeceshuttle/deep-learning-proj/results" "/Users/reeceshuttleworth/Dropbox/Mac (3)/Documents/GitHub/deep-learning-proj"
+```
